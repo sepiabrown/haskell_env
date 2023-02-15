@@ -1,0 +1,73 @@
+{
+  # This is a template created by `hix init`
+  inputs.haskellNix.url = "github:input-output-hk/haskell.nix/706554cce6ebf4bdffbf50a2f65744bbbc73f824";
+  # haskellNix/hackage github:input-output-hk/hackage.nix/02de1352507ab1c40de1f87c9afd0c8fc6f60bad
+  # haskellNix/stackage github:input-output-hk/stackage.nix/f9e7f4b96b26865e0a49ec29e03147fe65336248
+  inputs.nixpkgs.follows = "haskellNix/nixpkgs-unstable";
+  inputs.nixpkgs_unstable.url = "nixpkgs/nixos-unstable"; # 5a350a8f31bb7ef0c6e79aea3795a890cf7743d4
+  inputs.flake-utils.url = "github:numtide/flake-utils";
+  outputs = { self, nixpkgs, nixpkgs_unstable, flake-utils, haskellNix }:
+    let
+      supportedSystems = [
+        "x86_64-linux"
+        #"x86_64-darwin"
+        #"aarch64-linux"
+        #"aarch64-darwin"
+      ];
+      github_copilot = "1.53.7011";
+    in
+      flake-utils.lib.eachSystem supportedSystems (system:
+      let
+        overlays = [ haskellNix.overlay
+          (final: prev: {
+            hixProject =
+              final.haskell-nix.hix.project {
+                src = ./.;
+                compiler-nix-name = "ghc925";#"ghc8107";
+
+                #evalSystem = "x86_64-linux";
+                #index-state = "2022-11-06T00:00:00Z"; #"2022-08-05T00:00:00Z";
+
+                # This is used by `nix develop .` to open a shell for use with
+                # `cabal`, `hlint` and `haskell-language-server`
+                shell.tools = {
+                  # cabal = ""; # seems to automatically install
+                  hlint = "3.4"; # "latest"=="3.5"
+                  haskell-language-server = "1.8.0.0"; # "latest"=="1.9.0.0"
+                };
+                # Non-Haskell shell tools go here
+                shell.buildInputs = with pkgs; [
+                  nixpkgs-fmt
+                  pkgs_unstable.code-server
+                  bashInteractive
+                ];
+                #shell.shellHook = pkgs.lib.optionalString (! builtins.pathExists (builtins.toString /home/sepiabrown/.local/share/code-server/extensions + "/github.copilot-${github_copilot}")) ''
+                #  ext="github.copilot-${github_copilot}"
+                #  URL=`echo $ext | sed -rn 's/(.*)\.(.*)-(.*)/https:\/\/marketplace.visualstudio.com\/_apis\/public\/gallery\/publishers\/\1\/vsextensions\/\2\/\3\/vspackage/p'`
+                #  echo "Downloading $URL to $ext.vsix..."
+                #  curl --compressed -sLo- $URL | head -2 
+                #  echo "Fin"
+                #'';
+                  #head -2 $(curl --compressed -sL $URL) 
+                  #${pkgs_unstable.code-server}/bin/code-server --install-extension $(curl --compressed -sL $URL) 
+                  #curl --compressed -sL $URL | ${pkgs_unstable.code-server}/bin/code-server --install-extension
+              };
+          })
+        ];
+        pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
+        pkgs_unstable = import nixpkgs_unstable { inherit system overlays; inherit (haskellNix) config; };
+        flake = pkgs.hixProject.flake {};
+      in flake // {
+        legacyPackages = pkgs;
+      });
+
+  # --- Flake Local Nix Configuration ----------------------------
+  nixConfig = {
+    # This sets the flake to use the IOG nix cache.
+    # Nix should ask for permission before using it,
+    # but remove it here if you do not want it to.
+    extra-substituters = ["https://cache.iog.io" "https://cache.zw3rk.com"];
+    extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk="];
+    allow-import-from-derivation = "true";
+  };
+}
