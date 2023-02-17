@@ -1,10 +1,10 @@
 {pkgs, ...}: {
   # name = "project-name";
   #NOTE: need to chage flake.nix too!
-  compiler-nix-name = "ghc8107"; # "ghc925"; # Version of GHC to use, 
+  compiler-nix-name = "ghc925";#"ghc8107"; # "ghc925"; # Version of GHC to use, 
   crossPlatforms = p: pkgs.lib.optionals pkgs.stdenv.hostPlatform.isx86_64 ([
     p.mingwW64
-    p.ghcjs
+    #p.ghcjs
   ] ++ pkgs.lib.optionals pkgs.stdenv.hostPlatform.isLinux [
     p.musl64
   ]);

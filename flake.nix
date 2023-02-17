@@ -30,7 +30,7 @@
               final.haskell-nix.hix.project {
                 src = ./.;
                 #NOTE: need to change nix/hix.nix too!
-                compiler-nix-name = "ghc8107"; # "ghc925";#
+                compiler-nix-name = "ghc925";#"ghc8107"; # "ghc925";#
 
                 #evalSystem = "x86_64-linux";
                 #index-state = "2022-11-06T00:00:00Z"; #"2022-08-05T00:00:00Z";
@@ -48,7 +48,11 @@
                   pkgs_unstable.code-server
                   bashInteractive
                 ];
-                shell.shellHook = pkgs.lib.optionalString (! builtins.pathExists (/home/sepiabrown/.local/share/code-server/extensions + "/${extension}")) ''
+
+                # This adds `js-unknown-ghcjs-cabal` to the shell.
+                #shell.crossPlatforms = p: [p.ghcjs];
+                
+                shell.shellHook = pkgs.lib.optionalString (! builtins.pathExists (~/.local/share/code-server/extensions + "/${extension}")) ''
                   ext="${extension}"
                   URL=`echo $ext | sed -rn 's/(.*)\.(.*)-(.*)/https:\/\/marketplace.visualstudio.com\/_apis\/public\/gallery\/publishers\/\1\/vsextensions\/\2\/\3\/vspackage/p'`
                   echo "Downloading $URL to $ext.vsix..."
@@ -63,7 +67,10 @@
         ];
         pkgs = import nixpkgs { inherit system overlays; inherit (haskellNix) config; };
         pkgs_unstable = import nixpkgs_unstable { inherit system overlays; inherit (haskellNix) config; };
-        flake = pkgs.hixProject.flake {};
+        flake = pkgs.hixProject.flake {
+          # This adds support for `nix build .#js-unknown-ghcjs:hello:exe:hello`
+          #crossPlatforms = p: [p.ghcjs];
+        };
       in flake // {
         legacyPackages = pkgs;
       });
@@ -73,8 +80,8 @@
     # This sets the flake to use the IOG nix cache.
     # Nix should ask for permission before using it,
     # but remove it here if you do not want it to.
-    extra-substituters = ["https://cache.iog.io" "https://cache.zw3rk.com"];
-    extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk="];
+    extra-substituters = ["https://cache.iog.io" "https://cache.zw3rk.com" "https://iohk.cachix.org"];
+    extra-trusted-public-keys = ["hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" "loony-tools:pr9m4BkM/5/eSTZlkQyRt57Jz7OMBxNSUiMC4FkcNfk=" "iohk.cachix.org-1:DpRUyj7h7V830dp/i6Nti+NEO2/nhblbov/8MW7Rqoo="];
     allow-import-from-derivation = "true";
   };
 }
